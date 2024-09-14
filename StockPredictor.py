@@ -99,6 +99,7 @@ train = stock[:training_data_len]
 test = stock[training_data_len:]
 test['Predictions'] = predictions  # Add the predicted prices to the test set.
 
+
 # Plot the training and test data along with the predicted prices.
 plt.figure(figsize=(10, 8))
 plt.plot(train['Date'], train['Close'], label="Train Data")  # Plot the training data
@@ -109,6 +110,22 @@ plt.xlabel('Date')
 plt.ylabel('Close Price (USD)')
 plt.legend()
 plt.show()
+
+# Print the training data (dates and close prices)
+print("Training Data:")
+print(train[['Date', 'Close']])  
+
+# Print the actual prices and predicted prices for the test data (dates, close prices, and predictions)
+print("Test Data with Actual and Predicted Prices:")
+print(test[['Date', 'Close', 'Predictions']])  
+
+# Save the training data to a CSV file
+train[['Date', 'Close']].to_csv(f"{name}_training_data.csv", index=False)
+print(f"Training data saved to {name}_training_data.csv")
+
+# Save the test data along with actual and predicted prices to a CSV file
+test[['Date', 'Close', 'Predictions']].to_csv(f"{name}_test_predictions.csv", index=False)
+print(f"Test data with actual and predicted prices saved to {name}_test_predictions.csv")
 
 #Predict stock prices for the next 30 days after 9/13/2024.
 
@@ -142,3 +159,18 @@ plt.xlabel('Date')
 plt.ylabel('Predicted Close Price (USD)')
 plt.legend()
 plt.show()
+
+# Print future dates and predicted prices
+print("Future Dates and Predicted Prices:")
+for date, prediction in zip(future_dates, future_predictions):
+    print(f"Date: {date}, Predicted Price: {prediction[0]}")
+
+# Create a DataFrame for future dates and predictions
+future_df = pd.DataFrame({
+    'Date': future_dates,
+    'Predicted Price': [pred[0] for pred in future_predictions]  # Extract the values from the predictions array
+})
+
+# Save the future predictions to a CSV file
+future_df.to_csv(f"{name}_future_predictions.csv", index=False)
+print(f"Future predictions saved to {name}_future_predictions.csv")
