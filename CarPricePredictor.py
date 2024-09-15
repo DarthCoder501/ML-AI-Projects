@@ -11,22 +11,38 @@ import warnings
 warnings.filterwarnings("ignore")
 
 #reads data from csv file 
-data = pd.read_csv("Cars Dataset.csv")
-
-#removing index column 
-data = data.iloc[: , 1:]
+df = pd.read_csv("Cars Dataset.csv")
 
 #define the headers/columns of the data 
 headers = ["Make", "Model", "Year", "Price", "Mileage"]
-data.columns = headers
-data.head()
+df.columns = headers
+df.head()
 
 #finding potential missing values 
-df = data
+data = df
 #finding missing values
-df.isna().any()
+data.isna().any()
 #finding if missing values
-df.isnull().any()
+data.isnull().any()
 
-print(df.columns)
-data.dtypes
+#Changing the price which is a string into a interger
+data.Price.unique()
+
+#Here it contains '?', so we Drop it
+data = data[data.Price != '?']
+
+data['Price'] = data['Price'].astype(int)
+
+x = np.array(df["Year"])
+y = np.array(df["Mileage"])
+z = np.array(df["Price"])
+
+fig = plt.figure(figsize=(8,6))
+ax = fig.add_subplot(111, projection = '3d')
+ax.scatter(x, y, z, c=z, cmap='viridis', marker='o')
+ax.set_xlabel("Year")
+ax.set_ylabel("Mileage")
+ax.set_zlabel("Price")
+
+plt.title("Example")
+plt.show()
