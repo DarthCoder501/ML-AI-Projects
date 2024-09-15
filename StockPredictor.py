@@ -9,11 +9,19 @@ from datetime import datetime
 import warnings
 warnings.filterwarnings("ignore")
 
-# Loads the historical stock data from a CSV file into a pandas DataFrame.
+# Loads the historical stock data from a CSV file into a pandas DataFrame
 data = pd.read_csv("sp500_stocks.csv")
 
+#Gets a list of valid stock symbols from dataset
+valid_symbols = data["Symbol"].unique()
+
 #Ask what stock want to filter out 
-name = input('What is the symbol of the stock you want to predict the price of?: ').strip().upper()
+while True:  
+    name = input('What is the symbol of the stock you want to predict the price of?: ').strip().upper()
+    if name in valid_symbols:
+        break #exits the loop when valid symbol is entered
+    else:
+        print(f"{name} is not a valid symbol. Please try again.")
 
 #Filters only that stocks data 
 stock = data[data['Symbol'] == name]
