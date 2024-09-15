@@ -40,7 +40,6 @@ def train_model(df):
     X = df[["Year", "Mileage"]]
     y = df["Price"]
     
-    # Training Dataset
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
     
     # Apply Random Forest Regressor
@@ -56,7 +55,6 @@ def visualize_predictions(y_test, y_pred):
     comparison_df = pd.DataFrame({'Actual Price': y_test.values, 'Predicted Price': y_pred})
     comparison_df.reset_index(inplace=True)
     
-    # Creating graph  
     plt.figure(figsize=(12, 8))
     plt.plot(comparison_df.index, comparison_df['Actual Price'], label='Actual Price', marker='o')
     plt.plot(comparison_df.index, comparison_df['Predicted Price'], label='Predicted Price', marker='x')
@@ -88,13 +86,12 @@ def plot_3d_scatter(df):
     if len(unique_makes) > len(marker_styles):
         print("Not enough unique markers. Using colors to differentiate makes.")
 
-    # Makes a unique marker for each feature 
     for i, make in enumerate(unique_makes):
         make_mask = df['Make'] == make
         ax.scatter(df['Year'][make_mask], df['Mileage'][make_mask], df['Price'][make_mask],
                    marker=marker_styles[i % len(marker_styles)], # Reuse markers if needed
                    color=colormap(i), label=make, s=50)
-    # Creates scatterplot 
+
     ax.set_xlabel("Car Year")
     ax.set_ylabel("Car Mileage (miles)")
     ax.set_zlabel("Car Price ($)")
