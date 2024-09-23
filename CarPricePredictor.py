@@ -7,7 +7,6 @@ import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn import metrics
-from pandas.plotting import parallel_coordinates
 import warnings
 
 # Filter warnings for cleaner output
