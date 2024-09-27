@@ -1,0 +1,40 @@
+<!-- /templates/training_plan.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Personalized Training Plan</title>
+</head>
+<body>
+    <div class="container">
+        <h2>Personalized Training Plan</h2>
+        <form id="trainingForm">
+            <input type="text" placeholder="Player Name" id="playerName" required class="form-control">
+            <textarea placeholder="Player Goals" id="playerGoals" required class="form-control"></textarea>
+            <button type="submit" class="btn btn-primary">Get Training Plan</button>
+        </form>
+        <div id="trainingPlanResult" class="mt-3"></div>
+    </div>
+
+    <script>
+        document.getElementById("trainingForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+            const playerName = document.getElementById("playerName").value;
+            const playerGoals = document.getElementById("playerGoals").value;
+
+            // Call your back-end API to fetch training plan
+            fetch('/api/get_training_plan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: playerName, goals: playerGoals })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("trainingPlanResult").innerHTML = data.plan;
+            });
+        });
+    </script>
+</body>
+</html>
