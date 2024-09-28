@@ -7,8 +7,6 @@ from models import db, Player
 # Create an instance of the Flask application
 app = Flask(__name__)
 
-#key = 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
-
 # Retrieve the API key from environment variables
 api_key = os.environ.get("GROQ_API_KEY")
 print(f"GROQ_API_KEY: {api_key}")  # Debug print to check if the API key is loaded
