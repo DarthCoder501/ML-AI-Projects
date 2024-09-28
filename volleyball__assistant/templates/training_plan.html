@@ -1,40 +1,39 @@
+<!-- /templates/training_plan.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Training Plan</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Personalized Training Plan</title>
 </head>
 <body>
-    <h1>Welcome to the Volleyball Training Assistant</h1>
-    <form id="trainingForm">
-        <label for="name">Player Name:</label>
-        <input type="text" id="name" name="name" required>
-        <br>
-        <label for="goals">Goals:</label>
-        <input type="text" id="goals" name="goals" required>
-        <br>
-        <button type="submit">Get Training Plan</button>
-    </form>
-
-    <div id="output"></div>
+    <div class="container">
+        <h2>Personalized Training Plan</h2>
+        <form id="trainingForm">
+            <input type="text" placeholder="Player Name" id="playerName" required class="form-control">
+            <textarea placeholder="Player Goals" id="playerGoals" required class="form-control"></textarea>
+            <button type="submit" class="btn btn-primary">Get Training Plan</button>
+        </form>
+        <div id="trainingPlanResult" class="mt-3"></div>
+    </div>
 
     <script>
-        document.getElementById('trainingForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const name = document.getElementById('name').value;
-            const goals = document.getElementById('goals').value;
+        document.getElementById("trainingForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+            const playerName = document.getElementById("playerName").value;
+            const playerGoals = document.getElementById("playerGoals").value;
 
-            const response = await fetch('/api/get_training_plan', {
+            // Call your back-end API to fetch training plan
+            fetch('/api/get_training_plan', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ name: name, goals: goals })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: playerName, goals: playerGoals })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("trainingPlanResult").innerHTML = data.plan;
             });
-
-            const data = await response.json();
-            document.getElementById('output').innerText = JSON.stringify(data);
         });
     </script>
 </body>
