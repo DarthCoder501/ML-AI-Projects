@@ -1,53 +1,89 @@
-import pickle
-import streamlit as st
-import pandas as pd
-import pickle
-import numpy as np
-import os
-from openai import OpenAI
-import utils as ut
+# Import necessary libraries
+import pickle  # For loading trained machine learning models
+import streamlit as st  # For creating the web app interface
+import pandas as pd  # For data manipulation and analysis
+import numpy as np  # For numerical operations
+import os  # For interacting with the operating system
+from openai import OpenAI  # For OpenAI API to generate explanations and emails
+import utils as ut  # Custom utility functions (not provided in this snippet)
+import plotly.express as px  # For creating interactive plots
+from scipy.stats import percentileofscore  # For calculating percentile ranks
 
+# Load customer data from a CSV file
 df = pd.read_csv('churn 2.csv')
 
+# Initialize OpenAI client with necessary API details
 client = OpenAI(base_url="https://api.groq.com/openai/v1",
                 api_key=os.environ.get('GROQ_API_KEY'))
 
+# Function to calculate percentile ranks for a selected customer
+def calculate_percentiles(selected_customer, df):
+    percentiles = {}  # Dictionary to store percentiles for each feature
+    for feature in df.columns:
+        # Exclude non-numeric features and target columns from analysis
+        if feature not in ['CustomerId', 'Surname', 'Exited', "RowNumber", "Geography", "HasCrCard", "IsActiveMember", "Gender"]:
+            # Calculate the percentile rank of the selected customer's feature value
+            rank = percentileofscore(df[feature], selected_customer[feature])
+            percentiles[feature] = rank  # Store the rank
+    return percentiles
 
+# Function to create a bar plot of customer percentiles
+def display_percentiles(percentiles):
+    # Convert percentiles dictionary to a DataFrame for plotting
+    percentile_df = pd.DataFrame(list(percentiles.items()), columns=['Feature', 'Percentile'])
+    # Create a bar chart using Plotly
+    fig = px.bar(percentile_df, x='Feature', y='Percentile',
+                  title="Customer Percentiles",
+                  labels={'Percentile': 'Percentile (%)'},
+                  text='Percentile')
+    # Format the plot for better visibility
+    fig.update_traces(texttemplate='%{text:.2f}%', textposition='auto')
+    fig.update_layout(yaxis=dict(tickvals=np.arange(0, 101, 10)), 
+                      yaxis_title='Percentile (%)',
+                      xaxis_title='Features',
+                      paper_bgcolor='rgba(0,0,0,0)',
+                      plot_bgcolor='rgba(0,0,0,0)',
+                      font=dict(color='white'))
+    return fig
+
+# Function to explain the churn prediction for a customer
 def explain_prediction(probability, input_dict, surname):
-  prompt = f"""You are an expert data scientist at a bank, where you specialize in interpreting and explaining predictions of machine learning models. 
-  Your machine learning model has predicted that a customer named {surname} has a {round(probability * 100, 1)}% of churning, based on the information provided below. 
-  Here is the customer's information: 
-  {input_dict}
+# Craft a detailed prompt for the LLM to generate an explanation
+  prompt = f"""
+    You are a senior data scientist at a bank specializing in interpreting and explaining predictions of customer churn. Your task is to provide a clear, concise explanation of why a customer named {surname} is at risk of churning ({round(probability * 100, 1)}%) based on their profile.
 
-  Here are the machine learning model's top 10 most important features for predicting churn:
-            Feature	| Importance
-  ------------------------------------
-  NumOfProducts	    | 0.323888
-  IsActiveMember	  | 0.164146
-  Age	              | 0.109550 
-  Geography_Germany	| 0.091373
-  Balance	          | 0.052786
-  Geography_France	| 0.046463
-  Gender_Female	    | 0.045283
-  Geography_Spain	  | 0.036855
-  CreditScore	      | 0.035005
-  EstimatedSalary	  | 0.032655
-  HasCrCard	        | 0.031940
-  Tenure	          | 0.030054
-  Gender_Male	      | 0.000000
+    ### Customer Information:
+    {input_dict}
 
+    ### Top 10 Features Contributing to Churn Prediction:
+    | Feature             | Importance |
+    |---------------------|------------|
+    | NumOfProducts       | 0.323888   |
+    | IsActiveMember      | 0.164146   |
+    | Age                 | 0.109550   |
+    | Geography_Germany   | 0.091373   |
+    | Balance             | 0.052786   |
+    | Geography_France    | 0.046463   |
+    | Gender_Female       | 0.045283   |
+    | Geography_Spain     | 0.036855   |
+    | CreditScore         | 0.035005   |
+    | EstimatedSalary     | 0.032655   |
 
-  Here are the summary statistics for churned customers: 
-  {df[df["Exited"] == 1].describe()}
-  Here are the summary statistics for non-churned customers:
-  {df[df["Exited"] == 0].describe()}
+    ### Summary Statistics:
+    **Churned Customers**:  
+    {df[df["Exited"] == 1].describe()}
 
-  - If the customer has over a 40% risk of churning, generate a 3 sentence explanation of why they are at risk of churning.
-  - If the customer has less than a 40% risk of churning, generate a 3 sentence explanation of why they might not be at risk of churning. 
-  - Your explanations should be based on the customer's information, the summary statitics of churned and non-churned customers, and the feature importances provided.
+    **Non-Churned Customers**:  
+    {df[df["Exited"] == 0].describe()}
 
-  Don't mention the probability of churning, or the machine learning model, or say anything like "Based on the machine learning model's predictions and top 10 most important features", just explain the prediction.
-  """
+    ### Instructions:
+    - If the churn risk is over 40%, provide a 3-sentence explanation of why the customer is likely to churn, focusing on key factors from the customer's profile and feature importance.
+    - If the churn risk is under 40%, explain in 3 sentences why the customer is less likely to churn, again focusing on relevant customer data and statistics.
+    - The explanation should be purely customer-centric, without any mention of the probability, machine learning models, or the top 10 feature list.
+
+    Craft the explanation with a natural, conversational tone that’s easy to understand by non-technical stakeholders.
+    """
+
 
   raw_response = client.chat.completions.create(
       model="llama3-groq-70b-8192-tool-use-preview",
@@ -55,22 +91,40 @@ def explain_prediction(probability, input_dict, surname):
           "role": "user",
           "content": prompt
       }])
-
+  # Return the generated explanation
   return raw_response.choices[0].message.content
 
-
+# Function to generate a personalized email for the customer
 def generate_email(probability, input_dict, explanation, surname):
-  prompt = f"""You are a manager at HS Bank. You are responsible for ensuring customers stay with the bank and are incentivized with various offers. 
-  You noticed a customer named {surname} has a {round(probability * 100, 1)}% probability of churning. 
-  Here is the customer's information:
-  {input_dict}
-  Here is some explanation as to why the customer might be at risk of churning:
-  {explanation}
+  prompt = f"""
+    You are a customer retention manager at HS Bank. Your goal is to retain a customer named {surname}, who may be at risk of churning.
 
-  Generate an email to the customer based on their information, asking them to stay if they are at risk of churning, or offering them incentives so that they become more loyal to the bank. 
+    ### Customer Information:
+    {input_dict}
 
-  Make sure to list out a set of incentives to stay based on their information, in bullet point format. Don't ever mention the probability of churning, or the machine learning model to the customer"""
+    ### Explanation of Churn Risk:
+    {explanation}
 
+    ### Task:
+    Compose a personalized email to {surname} encouraging them to remain loyal to HS Bank. Provide **specific numerical incentives** based on their account details, such as discounts, cashback percentages, waived fees, or improved interest rates. However, do **not explicitly state** phrases like "tailored specifically to your banking habits and preferences" or mention the customer's activity level directly. The message should imply these incentives are designed for the customer's unique situation without being overt about it.
+
+    ### Guidelines for Crafting the Email:
+    - Use a warm, professional tone.
+    - Provide **specific, numerically defined incentives** that align with the customer’s profile. Examples:
+      - If they maintain a high balance, offer a **0.5% increase in interest rate** for their savings account.
+      - If they use credit cards frequently, offer **5% cashback** on purchases for the next three months.
+      - If they have been a long-term customer, offer **waived fees for 6 months** on services like wire transfers or overdraft protection.
+      - If they have dormant products, offer **$50 credit** for reactivating the service or **no annual fee** for one year on their credit card.
+    - The email should imply that these offers are part of a broader initiative or program, without directly referencing the customer’s specific product usage.
+    - Incentives should be listed in bullet-point format with clear numerical values.
+    - Avoid mentioning churn probability, the machine learning model, or any technical details.
+
+    ### Example Structure of the Email:
+    - Opening: Express appreciation for their loyalty and mention how valued they are as a customer.
+    - Middle: Subtly address their current relationship with the bank without directly referencing their product usage (e.g., “As part of our ongoing commitment to customers, we’re extending some special offers...”).
+    - Incentives: Present the numerical incentives in a friendly, straightforward manner without drawing direct attention to their specific banking behavior.
+    """
+  # Call the LLM to get a response 
   raw_response = client.chat.completions.create(
       model="llama3-groq-70b-8192-tool-use-preview",
       messages=[{
@@ -79,14 +133,15 @@ def generate_email(probability, input_dict, explanation, surname):
       }])
 
   print("\n\n EMAIL PROMPT", prompt)
+  # Return the generated email 
   return raw_response.choices[0].message.content
 
-
+# Function to load trained machine learning models from files
 def load_model(filename):
   with open(filename, "rb") as file:
     return pickle.load(file)
 
-
+# Load the various trained models 
 xgboost_model = load_model("xgb_model.pkl")
 
 naive_bayes_model = load_model("nb_model.pkl")
@@ -99,13 +154,13 @@ svm_model = load_model("svm_model.pkl")
 
 knn_model = load_model("knn_model.pkl")
 
-voting_classer_model = load_model("voting_clf.pkl")
+voting_classer_model = load_model("voting_hard_clf.pkl")
 
 xgboost_SMOTE_model = load_model("xgboost-SMOTE.pkl")
 
 xgboost_featureEngineered_model = load_model("xgboost-featureEngineered.pkl")
 
-
+# Function to prepare input data for predictions
 def prepare_input(credit_score, location, gender, age, tenure, balance,
                   num_products, has_credit_card, is_active_member,
                   estimated_salary):
@@ -127,7 +182,6 @@ def prepare_input(credit_score, location, gender, age, tenure, balance,
   input_df = pd.DataFrame([input_dict])
   return input_df, input_dict
 
-
 def make_predictions(input_df, input_dict):
 
   probabilities = {
@@ -148,9 +202,12 @@ def make_predictions(input_df, input_dict):
   with col2:
     fig_probs = ut.create_model_probability_chart(probabilities)
     st.plotly_chart(fig_probs, use_container_width=True)
+      
+  percentiles = calculate_percentiles(selected_customer, df)
+  percentile_fig = display_percentiles(percentiles)
+  st.plotly_chart(percentile_fig, use_container_width=True)
 
   return avg_probability
-
 
 st.title("Customer Churn Prediction")
 
@@ -185,7 +242,7 @@ if selected_customer_option:
 
     credit_score = st.number_input("Credit Score",
                                    min_value=300,
-                                   max_value=800,
+                                   max_value=850,
                                    value=int(selected_customer['CreditScore']))
 
     location = st.selectbox("Location", ["Spain", "France", "Germany"],
